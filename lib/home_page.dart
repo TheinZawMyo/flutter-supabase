@@ -10,6 +10,8 @@ import 'package:flutter_supabase/models/category.dart';
 import 'package:flutter_supabase/profile_page.dart';
 import 'package:flutter_supabase/services/database_service.dart';
 import 'package:flutter_supabase/utils/formatters.dart';
+import 'package:flutter_supabase/utils/connectivity_utils.dart'; // Add this import
+import 'package:flutter_supabase/utils/custom_snackbar.dart'; // Add this import
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:fl_chart/fl_chart.dart';
 
@@ -77,6 +79,16 @@ class _HomePageState extends State<HomePage>
       });
     } catch (e) {
       debugPrint('Error loading data: $e');
+      if (mounted) {
+        if (ConnectivityUtils.isNoInternetError(e)) {
+          CustomSnackBar.show(
+            context: context,
+            message:
+                'Could not load data. Please check your internet connection.',
+            type: SnackBarType.error,
+          );
+        }
+      }
       setState(() => _isLoading = false);
     }
   }

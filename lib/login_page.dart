@@ -3,6 +3,7 @@ import 'package:flutter_supabase/constants/app_colors.dart';
 import 'package:flutter_supabase/register_page.dart';
 import 'package:flutter_supabase/home_page.dart';
 import 'package:flutter_supabase/utils/custom_snackbar.dart';
+import 'package:flutter_supabase/utils/connectivity_utils.dart'; // Add this import
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class LoginPage extends StatefulWidget {
@@ -57,6 +58,18 @@ class _LoginPageState extends State<LoginPage>
   }
 
   Future<void> _signIn() async {
+    // Proactive internet check
+    if (!await ConnectivityUtils.hasInternet()) {
+      if (mounted) {
+        CustomSnackBar.show(
+          context: context,
+          message: 'No internet connection. Please try again later.',
+          type: SnackBarType.error,
+        );
+      }
+      return;
+    }
+
     setState(() {
       _isLoading = true;
     });
@@ -83,17 +96,26 @@ class _LoginPageState extends State<LoginPage>
       }
     } on AuthException catch (error) {
       if (mounted) {
+        // Even AuthException could be related to connectivity if wrapped
+        final message = ConnectivityUtils.isNoInternetError(error)
+            ? 'No internet connection. Please check your network.'
+            : error.message;
+
         CustomSnackBar.show(
           context: context,
-          message: error.message,
+          message: message,
           type: SnackBarType.error,
         );
       }
     } catch (error) {
       if (mounted) {
+        final message = ConnectivityUtils.isNoInternetError(error)
+            ? 'No internet connection. Please check your network.'
+            : 'Unexpected error occurred';
+
         CustomSnackBar.show(
           context: context,
-          message: 'Unexpected error occurred',
+          message: message,
           type: SnackBarType.error,
         );
       }
@@ -165,19 +187,19 @@ class _LoginPageState extends State<LoginPage>
                       icon: Icons.lock_outline,
                       isObscured: true,
                     ),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton(
-                        onPressed: () {},
-                        child: const Text(
-                          'Forgot Password?',
-                          style: TextStyle(
-                            color: AppColors.secondaryText,
-                            decoration: TextDecoration.underline,
-                          ),
-                        ),
-                      ),
-                    ),
+                    // Align(
+                    //   alignment: Alignment.centerRight,
+                    //   child: TextButton(
+                    //     onPressed: () {},
+                    //     child: const Text(
+                    //       'Forgot Password?',
+                    //       style: TextStyle(
+                    //         color: AppColors.secondaryText,
+                    //         decoration: TextDecoration.underline,
+                    //       ),
+                    //     ),
+                    //   ),
+                    // ),
                     const SizedBox(height: 24),
                     SizedBox(
                       width: double.infinity,
@@ -218,14 +240,14 @@ class _LoginPageState extends State<LoginPage>
                         Expanded(child: Divider(color: AppColors.divider)),
                       ],
                     ),
-                    const SizedBox(height: 20),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        _buildSocialButton(Icons.g_mobiledata, "Google"),
-                        _buildSocialButton(Icons.facebook, "Facebook"),
-                      ],
-                    ),
+                    // const SizedBox(height: 20),
+                    // Row(
+                    //   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    //   children: [
+                    //     _buildSocialButton(Icons.g_mobiledata, "Google"),
+                    //     _buildSocialButton(Icons.facebook, "Facebook"),
+                    //   ],
+                    // ),
                     const SizedBox(height: 24),
                     TextButton(
                       onPressed: () {
@@ -310,26 +332,6 @@ class _LoginPageState extends State<LoginPage>
             horizontal: 16,
             vertical: 16,
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSocialButton(IconData icon, String label) {
-    return Container(
-      width: 150,
-      height: 50,
-      decoration: BoxDecoration(
-        color: AppColors.inputFieldBackground,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.divider),
-      ),
-      child: TextButton.icon(
-        onPressed: () {},
-        icon: Icon(icon, color: AppColors.primaryText),
-        label: Text(
-          label,
-          style: const TextStyle(color: AppColors.primaryText),
         ),
       ),
     );

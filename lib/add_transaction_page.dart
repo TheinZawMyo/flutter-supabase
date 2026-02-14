@@ -5,6 +5,7 @@ import 'package:flutter_supabase/models/category.dart';
 import 'package:flutter_supabase/models/transaction.dart';
 import 'package:flutter_supabase/services/database_service.dart';
 import 'package:flutter_supabase/utils/custom_snackbar.dart';
+import 'package:flutter_supabase/utils/connectivity_utils.dart'; // Add this import
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
@@ -101,9 +102,13 @@ class _AddTransactionPageState extends State<AddTransactionPage>
       }
     } catch (e) {
       if (mounted) {
+        final message = ConnectivityUtils.isNoInternetError(e)
+            ? 'No internet connection. Please check your network and try again.'
+            : 'Error: ${e.toString()}';
+
         CustomSnackBar.show(
           context: context,
-          message: 'Error: ${e.toString()}',
+          message: message,
           type: SnackBarType.error,
         );
       }

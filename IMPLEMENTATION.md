@@ -85,6 +85,14 @@
   - Success type for successful registration
   - 500ms delay before navigation back to login
 
+### 5. Connectivity Monitoring (`lib/widgets/connectivity_wrapper.dart`)
+- **Real-time Internet Tracking**
+  - Automatically detects internet loss and restoration
+  - Global implementation using `MaterialApp` builder
+  - "No Internet Connection" persistent alert (Red)
+  - "Back Online" temporary alert (Green)
+  - Seamless integration with the app's premium design system
+
 ## 🎨 Design Highlights
 
 ### Color Scheme

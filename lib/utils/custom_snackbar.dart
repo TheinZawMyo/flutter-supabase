@@ -1,13 +1,27 @@
 import 'package:flutter/material.dart';
 
 class CustomSnackBar {
-  static void show({
+  static OverlayEntry show({
     required BuildContext context,
     required String message,
     required SnackBarType type,
     Duration duration = const Duration(seconds: 3),
   }) {
     final overlay = Overlay.of(context);
+    return showWithOverlay(
+      overlay: overlay,
+      message: message,
+      type: type,
+      duration: duration,
+    );
+  }
+
+  static OverlayEntry showWithOverlay({
+    required OverlayState overlay,
+    required String message,
+    required SnackBarType type,
+    Duration duration = const Duration(seconds: 3),
+  }) {
     late OverlayEntry overlayEntry;
 
     overlayEntry = OverlayEntry(
@@ -15,11 +29,16 @@ class CustomSnackBar {
         message: message,
         type: type,
         duration: duration,
-        onDismiss: () => overlayEntry.remove(),
+        onDismiss: () {
+          if (overlayEntry.mounted) {
+            overlayEntry.remove();
+          }
+        },
       ),
     );
 
     overlay.insert(overlayEntry);
+    return overlayEntry;
   }
 }
 

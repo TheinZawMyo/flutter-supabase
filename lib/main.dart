@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_supabase/login_page.dart';
+import 'package:flutter_supabase/widgets/connectivity_wrapper.dart';
+import 'package:flutter_supabase/utils/keys.dart'; // Add this import
 
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -21,9 +23,14 @@ class MainApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
+    return MaterialApp(
+      title: 'Budget Tracking',
+      navigatorKey: navigatorKey,
       debugShowCheckedModeBanner: false,
-      home: LoginPage(),
+      home: const LoginPage(),
+      builder: (context, child) {
+        return ConnectivityWrapper(child: child!);
+      },
     );
   }
 }

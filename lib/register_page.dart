@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_supabase/constants/app_colors.dart';
 import 'package:flutter_supabase/utils/custom_snackbar.dart';
+import 'package:flutter_supabase/utils/connectivity_utils.dart'; // Add this import
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class RegisterPage extends StatefulWidget {
@@ -57,6 +58,18 @@ class _RegisterPageState extends State<RegisterPage>
   }
 
   Future<void> _signUp() async {
+    // Proactive internet check
+    if (!await ConnectivityUtils.hasInternet()) {
+      if (mounted) {
+        CustomSnackBar.show(
+          context: context,
+          message: 'No internet connection. Please try again later.',
+          type: SnackBarType.error,
+        );
+      }
+      return;
+    }
+
     setState(() {
       _isLoading = true;
     });
@@ -66,11 +79,13 @@ class _RegisterPageState extends State<RegisterPage>
     final confirmPassword = _confirmPasswordController.text.trim();
 
     if (email.isEmpty || password.isEmpty || confirmPassword.isEmpty) {
-      CustomSnackBar.show(
-        context: context,
-        message: 'Please fill in all fields',
-        type: SnackBarType.warning,
-      );
+      if (mounted) {
+        CustomSnackBar.show(
+          context: context,
+          message: 'Please fill in all fields',
+          type: SnackBarType.warning,
+        );
+      }
       setState(() {
         _isLoading = false;
       });
@@ -78,11 +93,13 @@ class _RegisterPageState extends State<RegisterPage>
     }
 
     if (password != confirmPassword) {
-      CustomSnackBar.show(
-        context: context,
-        message: 'Passwords do not match',
-        type: SnackBarType.error,
-      );
+      if (mounted) {
+        CustomSnackBar.show(
+          context: context,
+          message: 'Passwords do not match',
+          type: SnackBarType.error,
+        );
+      }
       setState(() {
         _isLoading = false;
       });
@@ -109,17 +126,26 @@ class _RegisterPageState extends State<RegisterPage>
       }
     } on AuthException catch (error) {
       if (mounted) {
+        // Handle internet errors wrapped in AuthException
+        final message = ConnectivityUtils.isNoInternetError(error)
+            ? 'No internet connection. Please check your network.'
+            : error.message;
+
         CustomSnackBar.show(
           context: context,
-          message: error.message,
+          message: message,
           type: SnackBarType.error,
         );
       }
     } catch (error) {
       if (mounted) {
+        final message = ConnectivityUtils.isNoInternetError(error)
+            ? 'Registration failed. No internet connection.'
+            : 'Unexpected error occurred';
+
         CustomSnackBar.show(
           context: context,
-          message: 'Unexpected error occurred',
+          message: message,
           type: SnackBarType.error,
         );
       }
