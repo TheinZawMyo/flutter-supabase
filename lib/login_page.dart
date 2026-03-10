@@ -187,19 +187,6 @@ class _LoginPageState extends State<LoginPage>
                       icon: Icons.lock_outline,
                       isObscured: true,
                     ),
-                    // Align(
-                    //   alignment: Alignment.centerRight,
-                    //   child: TextButton(
-                    //     onPressed: () {},
-                    //     child: const Text(
-                    //       'Forgot Password?',
-                    //       style: TextStyle(
-                    //         color: AppColors.secondaryText,
-                    //         decoration: TextDecoration.underline,
-                    //       ),
-                    //     ),
-                    //   ),
-                    // ),
                     const SizedBox(height: 24),
                     SizedBox(
                       width: double.infinity,
@@ -240,14 +227,6 @@ class _LoginPageState extends State<LoginPage>
                         Expanded(child: Divider(color: AppColors.divider)),
                       ],
                     ),
-                    // const SizedBox(height: 20),
-                    // Row(
-                    //   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    //   children: [
-                    //     _buildSocialButton(Icons.g_mobiledata, "Google"),
-                    //     _buildSocialButton(Icons.facebook, "Facebook"),
-                    //   ],
-                    // ),
                     const SizedBox(height: 24),
                     TextButton(
                       onPressed: () {

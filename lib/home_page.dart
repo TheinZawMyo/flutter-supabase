@@ -4,14 +4,15 @@ import 'package:flutter_supabase/budgets_page.dart';
 import 'package:flutter_supabase/categories_page.dart';
 import 'package:flutter_supabase/transactions_page.dart';
 import 'package:flutter_supabase/constants/app_colors.dart';
-import 'package:flutter_supabase/constants/default_categories.dart';
+import 'package:flutter_supabase/constants/category_icons.dart';
 import 'package:flutter_supabase/models/transaction.dart';
 import 'package:flutter_supabase/models/category.dart';
+import 'package:flutter_supabase/models/settings.dart';
 import 'package:flutter_supabase/profile_page.dart';
 import 'package:flutter_supabase/services/database_service.dart';
 import 'package:flutter_supabase/utils/formatters.dart';
-import 'package:flutter_supabase/utils/connectivity_utils.dart'; // Add this import
-import 'package:flutter_supabase/utils/custom_snackbar.dart'; // Add this import
+import 'package:flutter_supabase/utils/connectivity_utils.dart';
+import 'package:flutter_supabase/utils/custom_snackbar.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:fl_chart/fl_chart.dart';
 
@@ -35,6 +36,8 @@ class _HomePageState extends State<HomePage>
   double _expenses = 0;
   List<TransactionModel> _recentTransactions = [];
   Map<String, double> _categorySpends = {};
+  List<TransactionCategory> _categories = [];
+  AppSettings? _settings;
   bool _isLoading = true;
 
   @override
@@ -68,13 +71,17 @@ class _HomePageState extends State<HomePage>
       final totals = await _dbService.getTotals();
       final transactions = await _dbService.getTransactions();
       final categorySpends = await _dbService.getCategorySpends();
+      final categories = await _dbService.getAllCategories();
+      final settings = await _dbService.getSettings();
 
       setState(() {
         _balance = totals['balance'] ?? 0;
         _income = totals['income'] ?? 0;
         _expenses = totals['expenses'] ?? 0;
-        _recentTransactions = transactions.take(10).toList();
+        _recentTransactions = transactions.take(5).toList();
         _categorySpends = categorySpends;
+        _categories = categories;
+        _settings = settings;
         _isLoading = false;
       });
     } catch (e) {
@@ -180,7 +187,11 @@ class _HomePageState extends State<HomePage>
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            Formatters.formatCurrency(_balance),
+                            Formatters.formatCurrency(
+                              _balance,
+                              code: _settings?.currencyCode,
+                              symbol: _settings?.currencySymbol,
+                            ),
                             style: const TextStyle(
                               color: AppColors.primaryText,
                               fontSize: 28,
@@ -231,14 +242,16 @@ class _HomePageState extends State<HomePage>
                       label: 'Income',
                       amount: _income,
                       icon: Icons.arrow_upward,
-                      color: Colors.greenAccent,
+                      color: AppColors.sageGreen,
+                      settings: _settings,
                     ),
                     const SizedBox(width: 16),
                     _SummaryItem(
                       label: 'Expenses',
                       amount: _expenses,
                       icon: Icons.arrow_downward,
-                      color: Colors.redAccent,
+                      color: AppColors.expenseAlt,
+                      settings: _settings,
                     ),
                   ],
                 ),
@@ -286,6 +299,7 @@ class _HomePageState extends State<HomePage>
                                 ),
                                 child: _SpendingChart(
                                   categorySpends: _categorySpends,
+                                  categories: _categories,
                                 ),
                               ),
                             const Padding(
@@ -378,6 +392,8 @@ class _HomePageState extends State<HomePage>
                                       final tx = _recentTransactions[index];
                                       return _TransactionListItem(
                                         transaction: tx,
+                                        categories: _categories,
+                                        settings: _settings,
                                         onDelete: () =>
                                             _deleteTransaction(tx.id),
                                       );
@@ -416,11 +432,14 @@ class _SummaryItem extends StatelessWidget {
   final IconData icon;
   final Color color;
 
+  final AppSettings? settings;
+
   const _SummaryItem({
     required this.label,
     required this.amount,
     required this.icon,
     required this.color,
+    this.settings,
   });
 
   @override
@@ -454,7 +473,11 @@ class _SummaryItem extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  Formatters.formatCurrency(amount),
+                  Formatters.formatCurrency(
+                    amount,
+                    code: settings?.currencyCode,
+                    symbol: settings?.currencySymbol,
+                  ),
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
@@ -472,12 +495,15 @@ class _SummaryItem extends StatelessWidget {
 
 class _SpendingChart extends StatelessWidget {
   final Map<String, double> categorySpends;
+  final List<TransactionCategory> categories;
 
-  const _SpendingChart({required this.categorySpends});
+  const _SpendingChart({
+    required this.categorySpends,
+    required this.categories,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final categories = getDefaultCategories('');
     final List<PieChartSectionData> sections = [];
 
     categorySpends.forEach((catId, amount) {
@@ -579,16 +605,19 @@ class _SpendingChart extends StatelessWidget {
 
 class _TransactionListItem extends StatelessWidget {
   final TransactionModel transaction;
+  final List<TransactionCategory> categories;
+  final AppSettings? settings;
   final VoidCallback onDelete;
 
   const _TransactionListItem({
     required this.transaction,
+    required this.categories,
+    this.settings,
     required this.onDelete,
   });
 
   @override
   Widget build(BuildContext context) {
-    final categories = getDefaultCategories('');
     final category = categories.firstWhere(
       (c) => c.id == transaction.categoryId,
       orElse: () => TransactionCategory(
@@ -626,7 +655,7 @@ class _TransactionListItem extends StatelessWidget {
               borderRadius: BorderRadius.circular(15),
             ),
             child: Icon(
-              _getIcon(category.icon),
+              CategoryIcons.getIcon(category.icon),
               color: category.color,
               size: 24,
             ),
@@ -652,7 +681,7 @@ class _TransactionListItem extends StatelessWidget {
             ),
           ),
           Text(
-            '${isExpense ? '-' : '+'} ${Formatters.formatCurrency(transaction.amount)}',
+            '${isExpense ? '-' : '+'} ${Formatters.formatCurrency(transaction.amount, code: settings?.currencyCode, symbol: settings?.currencySymbol)}',
             style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 16,
@@ -666,27 +695,6 @@ class _TransactionListItem extends StatelessWidget {
         ],
       ),
     );
-  }
-
-  IconData _getIcon(String name) {
-    switch (name) {
-      case 'restaurant':
-        return Icons.restaurant;
-      case 'directions_car':
-        return Icons.directions_car;
-      case 'shopping_bag':
-        return Icons.shopping_bag;
-      case 'movie':
-        return Icons.movie;
-      case 'medical_services':
-        return Icons.medical_services;
-      case 'payments':
-        return Icons.payments;
-      case 'trending_up':
-        return Icons.trending_up;
-      default:
-        return Icons.category;
-    }
   }
 }
 

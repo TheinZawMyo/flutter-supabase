@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_supabase/constants/app_colors.dart';
-import 'package:flutter_supabase/constants/default_categories.dart';
+import 'package:flutter_supabase/constants/category_icons.dart';
 import 'package:flutter_supabase/models/transaction.dart';
 import 'package:flutter_supabase/models/category.dart';
+import 'package:flutter_supabase/models/settings.dart';
 import 'package:flutter_supabase/services/database_service.dart';
 import 'package:flutter_supabase/utils/formatters.dart';
 
 class TransactionsPage extends StatefulWidget {
-  const TransactionsPage({super.key});
+  final String? budgetId;
+  final String? budgetName;
+  const TransactionsPage({super.key, this.budgetId, this.budgetName});
 
   @override
   State<TransactionsPage> createState() => _TransactionsPageState();
@@ -22,9 +25,11 @@ class _TransactionsPageState extends State<TransactionsPage>
   final DatabaseService _dbService = DatabaseService();
   List<TransactionModel> _transactions = [];
   List<TransactionModel> _filteredTransactions = [];
+  AppSettings? _settings;
   bool _isLoading = true;
   String _searchQuery = '';
   TransactionType? _filterType;
+  List<TransactionCategory> _categories = [];
 
   @override
   void initState() {
@@ -51,9 +56,15 @@ class _TransactionsPageState extends State<TransactionsPage>
   Future<void> _loadTransactions() async {
     setState(() => _isLoading = true);
     try {
-      final transactions = await _dbService.getTransactions();
+      final transactions = await _dbService.getTransactions(
+        budgetId: widget.budgetId,
+      );
+      final categories = await _dbService.getAllCategories();
+      final settings = await _dbService.getSettings();
       setState(() {
         _transactions = transactions;
+        _categories = categories;
+        _settings = settings;
         _applyFilters();
         _isLoading = false;
       });
@@ -111,9 +122,9 @@ class _TransactionsPageState extends State<TransactionsPage>
                             size: 20,
                           ),
                         ),
-                        const Text(
-                          'Transactions',
-                          style: TextStyle(
+                        Text(
+                          widget.budgetName ?? 'Transactions',
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 22,
                             fontWeight: FontWeight.bold,
@@ -121,6 +132,21 @@ class _TransactionsPageState extends State<TransactionsPage>
                         ),
                       ],
                     ),
+                    if (widget.budgetName != null)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 48, top: 4),
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            'Budget View',
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.7),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ),
                     const SizedBox(height: 16),
                     // Search Bar
                     Container(
@@ -216,6 +242,8 @@ class _TransactionsPageState extends State<TransactionsPage>
                                     final tx = _filteredTransactions[index];
                                     return _TransactionListItem(
                                       transaction: tx,
+                                      categories: _categories,
+                                      settings: _settings,
                                       onDelete: () async {
                                         // Handle delete
                                         await _dbService.deleteTransaction(
@@ -310,16 +338,19 @@ class _FilterChip extends StatelessWidget {
 // Reusing same item style from home page for consistency
 class _TransactionListItem extends StatelessWidget {
   final TransactionModel transaction;
+  final List<TransactionCategory> categories;
+  final AppSettings? settings;
   final VoidCallback onDelete;
 
   const _TransactionListItem({
     required this.transaction,
+    required this.categories,
+    this.settings,
     required this.onDelete,
   });
 
   @override
   Widget build(BuildContext context) {
-    final categories = getDefaultCategories('');
     final category = categories.firstWhere(
       (c) => c.id == transaction.categoryId,
       orElse: () => TransactionCategory(
@@ -357,7 +388,7 @@ class _TransactionListItem extends StatelessWidget {
               borderRadius: BorderRadius.circular(15),
             ),
             child: Icon(
-              _getIcon(category.icon),
+              CategoryIcons.getIcon(category.icon),
               color: category.color,
               size: 24,
             ),
@@ -386,7 +417,7 @@ class _TransactionListItem extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                '${isExpense ? '-' : '+'} ${Formatters.formatCurrency(transaction.amount)}',
+                '${isExpense ? '-' : '+'} ${Formatters.formatCurrency(transaction.amount, code: settings?.currencyCode, symbol: settings?.currencySymbol)}',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
@@ -409,26 +440,5 @@ class _TransactionListItem extends StatelessWidget {
         ],
       ),
     );
-  }
-
-  IconData _getIcon(String name) {
-    switch (name) {
-      case 'restaurant':
-        return Icons.restaurant;
-      case 'directions_car':
-        return Icons.directions_car;
-      case 'shopping_bag':
-        return Icons.shopping_bag;
-      case 'movie':
-        return Icons.movie;
-      case 'medical_services':
-        return Icons.medical_services;
-      case 'payments':
-        return Icons.payments;
-      case 'trending_up':
-        return Icons.trending_up;
-      default:
-        return Icons.category;
-    }
   }
 }

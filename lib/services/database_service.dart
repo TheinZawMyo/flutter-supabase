@@ -2,16 +2,21 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_supabase/models/transaction.dart';
 import 'package:flutter_supabase/models/budget.dart';
 import 'package:flutter_supabase/models/category.dart';
+import 'package:flutter_supabase/models/settings.dart';
+import 'package:flutter_supabase/constants/default_categories.dart';
 
 class DatabaseService {
   final SupabaseClient _client = Supabase.instance.client;
 
   // Transactions
-  Future<List<TransactionModel>> getTransactions() async {
-    final response = await _client
-        .from('transactions')
-        .select()
-        .order('date', ascending: false);
+  Future<List<TransactionModel>> getTransactions({String? budgetId}) async {
+    var query = _client.from('transactions').select();
+
+    if (budgetId != null) {
+      query = query.eq('budget_id', budgetId);
+    }
+
+    final response = await query.order('date', ascending: false);
 
     return (response as List).map((e) => TransactionModel.fromJson(e)).toList();
   }
@@ -34,6 +39,16 @@ class DatabaseService {
     await _client.from('budgets').insert(budget.toJson());
   }
 
+  Future<void> updateBudget(BudgetModel budget) async {
+    await _client.from('budgets').update(budget.toJson()).match({
+      'id': budget.id,
+    });
+  }
+
+  Future<void> deleteBudget(String id) async {
+    await _client.from('budgets').delete().match({'id': id});
+  }
+
   // Categories
   Future<List<TransactionCategory>> getCategories() async {
     final response = await _client.from('categories').select();
@@ -44,6 +59,41 @@ class DatabaseService {
 
   Future<void> addCategory(TransactionCategory category) async {
     await _client.from('categories').insert(category.toJson());
+  }
+
+  Future<List<TransactionCategory>> getAllCategories() async {
+    final customCategories = await getCategories();
+    final userId = _client.auth.currentUser?.id ?? '';
+    final defaultCategories = getDefaultCategories(userId);
+    return [...defaultCategories, ...customCategories];
+  }
+
+  // Settings
+  Future<AppSettings> getSettings() async {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null) throw Exception('User not logged in');
+
+    final response = await _client
+        .from('settings')
+        .select()
+        .eq('user_id', userId)
+        .maybeSingle();
+
+    if (response == null) {
+      final defaultSettings = AppSettings(
+        userId: userId,
+        currencyCode: 'MMK',
+        currencySymbol: 'Ks',
+      );
+      await updateSettings(defaultSettings);
+      return defaultSettings;
+    }
+
+    return AppSettings.fromJson(response);
+  }
+
+  Future<void> updateSettings(AppSettings settings) async {
+    await _client.from('settings').upsert(settings.toJson());
   }
 
   // Analytics Helpers
@@ -79,5 +129,16 @@ class DatabaseService {
     }
 
     return categorySpends;
+  }
+
+  Future<double> getSpentAmount(String budgetId) async {
+    final transactions = await getTransactions(budgetId: budgetId);
+    double spent = 0;
+    for (var tx in transactions) {
+      if (tx.type == TransactionType.expense) {
+        spent += tx.amount;
+      }
+    }
+    return spent;
   }
 }

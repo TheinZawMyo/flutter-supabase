@@ -92,3 +92,27 @@ USING (auth.uid() = user_id);
 CREATE POLICY "Users can delete their own budgets" 
 ON budgets FOR DELETE 
 USING (auth.uid() = user_id);
+
+-- Create settings table
+CREATE TABLE settings (
+  user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  currency_code TEXT DEFAULT 'MMK' NOT NULL,
+  currency_symbol TEXT DEFAULT 'Ks' NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
+);
+
+-- Enable RLS
+ALTER TABLE settings ENABLE ROW LEVEL SECURITY;
+
+-- Create policies
+CREATE POLICY "Users can view their own settings" 
+ON settings FOR SELECT 
+USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert their own settings" 
+ON settings FOR INSERT 
+WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update their own settings" 
+ON settings FOR UPDATE 
+USING (auth.uid() = user_id);

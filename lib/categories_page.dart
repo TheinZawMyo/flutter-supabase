@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_supabase/constants/app_colors.dart';
+import 'package:flutter_supabase/constants/category_icons.dart';
 import 'package:flutter_supabase/constants/default_categories.dart';
 import 'package:flutter_supabase/models/category.dart';
 import 'package:flutter_supabase/services/database_service.dart';
-import 'package:flutter_supabase/utils/custom_snackbar.dart';
+import 'package:flutter_supabase/add_category_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class CategoriesPage extends StatefulWidget {
@@ -119,7 +120,7 @@ class _CategoriesPageState extends State<CategoriesPage>
                   child: Container(
                     width: double.infinity,
                     decoration: const BoxDecoration(
-                      color: Color(0xFFF8F9FE),
+                      color: AppColors.background,
                       borderRadius: BorderRadius.only(
                         topLeft: Radius.circular(35),
                         topRight: Radius.circular(35),
@@ -157,13 +158,14 @@ class _CategoriesPageState extends State<CategoriesPage>
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // Navigate to add category (future enhancement)
-          CustomSnackBar.show(
-            context: context,
-            message: 'Custom categories feature coming soon!',
-            type: SnackBarType.info,
+        onPressed: () async {
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const AddCategoryPage()),
           );
+          if (result == true) {
+            _loadCategories();
+          }
         },
         backgroundColor: AppColors.buttonBackground,
         child: const Icon(Icons.add, color: Colors.white, size: 30),
@@ -179,7 +181,7 @@ class _CategoriesPageState extends State<CategoriesPage>
         style: const TextStyle(
           fontSize: 18,
           fontWeight: FontWeight.bold,
-          color: Color(0xFF1E1E2D),
+          color: AppColors.deepestGreen,
         ),
       ),
     );
@@ -234,7 +236,7 @@ class _CategoryItem extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
-              _getIcon(category.icon),
+              CategoryIcons.getIcon(category.icon),
               color: category.color,
               size: 20,
             ),
@@ -282,26 +284,5 @@ class _CategoryItem extends StatelessWidget {
         ],
       ),
     );
-  }
-
-  IconData _getIcon(String name) {
-    switch (name) {
-      case 'restaurant':
-        return Icons.restaurant;
-      case 'directions_car':
-        return Icons.directions_car;
-      case 'shopping_bag':
-        return Icons.shopping_bag;
-      case 'movie':
-        return Icons.movie;
-      case 'medical_services':
-        return Icons.medical_services;
-      case 'payments':
-        return Icons.payments;
-      case 'trending_up':
-        return Icons.trending_up;
-      default:
-        return Icons.category;
-    }
   }
 }

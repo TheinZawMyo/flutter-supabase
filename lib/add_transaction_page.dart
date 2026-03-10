@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_supabase/constants/app_colors.dart';
+import 'package:flutter_supabase/constants/category_icons.dart';
 import 'package:flutter_supabase/constants/default_categories.dart';
 import 'package:flutter_supabase/models/category.dart';
 import 'package:flutter_supabase/models/transaction.dart';
 import 'package:flutter_supabase/services/database_service.dart';
 import 'package:flutter_supabase/utils/custom_snackbar.dart';
-import 'package:flutter_supabase/utils/connectivity_utils.dart'; // Add this import
+import 'package:flutter_supabase/utils/connectivity_utils.dart';
+import 'package:flutter_supabase/models/budget.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
@@ -27,8 +29,13 @@ class _AddTransactionPageState extends State<AddTransactionPage>
   final _amountController = TextEditingController();
   TransactionType _type = TransactionType.expense;
   String? _selectedCategoryId;
+  String? _selectedBudgetId;
   final DateTime _selectedDate = DateTime.now();
   bool _isLoading = false;
+  List<TransactionCategory> _allCategories = [];
+  List<BudgetModel> _budgets = [];
+  bool _isCategoriesLoading = true;
+  bool _isBudgetsLoading = true;
 
   final DatabaseService _dbService = DatabaseService();
 
@@ -51,6 +58,37 @@ class _AddTransactionPageState extends State<AddTransactionPage>
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
 
     _controller.forward();
+    _loadCategories();
+    _loadBudgets();
+  }
+
+  Future<void> _loadBudgets() async {
+    try {
+      final budgets = await _dbService.getBudgets();
+      setState(() {
+        _budgets = budgets;
+        _isBudgetsLoading = false;
+      });
+    } catch (e) {
+      debugPrint('Error loading budgets: $e');
+      setState(() => _isBudgetsLoading = false);
+    }
+  }
+
+  Future<void> _loadCategories() async {
+    try {
+      final customCategories = await _dbService.getCategories();
+      final defaultCategories = getDefaultCategories(
+        Supabase.instance.client.auth.currentUser?.id ?? '',
+      );
+      setState(() {
+        _allCategories = [...defaultCategories, ...customCategories];
+        _isCategoriesLoading = false;
+      });
+    } catch (e) {
+      debugPrint('Error loading categories: $e');
+      setState(() => _isCategoriesLoading = false);
+    }
   }
 
   @override
@@ -82,6 +120,7 @@ class _AddTransactionPageState extends State<AddTransactionPage>
       final transaction = TransactionModel(
         id: const Uuid().v4(),
         userId: user.id,
+        budgetId: _selectedBudgetId,
         title: _titleController.text.trim(),
         amount: double.parse(_amountController.text),
         type: _type,
@@ -119,18 +158,15 @@ class _AddTransactionPageState extends State<AddTransactionPage>
 
   @override
   Widget build(BuildContext context) {
-    final categories =
-        getDefaultCategories(
-              Supabase.instance.client.auth.currentUser?.id ?? '',
-            )
-            .where(
-              (cat) =>
-                  cat.type ==
-                  (_type == TransactionType.income
-                      ? CategoryType.income
-                      : CategoryType.expense),
-            )
-            .toList();
+    final filteredCategories = _allCategories
+        .where(
+          (cat) =>
+              cat.type ==
+              (_type == TransactionType.income
+                  ? CategoryType.income
+                  : CategoryType.expense),
+        )
+        .toList();
 
     return Scaffold(
       body: Container(
@@ -180,7 +216,7 @@ class _AddTransactionPageState extends State<AddTransactionPage>
                   child: Container(
                     width: double.infinity,
                     decoration: const BoxDecoration(
-                      color: Color(0xFFF8F9FE),
+                      color: AppColors.background,
                       borderRadius: BorderRadius.only(
                         topLeft: Radius.circular(35),
                         topRight: Radius.circular(35),
@@ -199,21 +235,25 @@ class _AddTransactionPageState extends State<AddTransactionPage>
                                 Expanded(
                                   child: _TypeButton(
                                     title: 'Expense',
+                                    icon: Icons.arrow_downward_rounded,
                                     isSelected:
                                         _type == TransactionType.expense,
-                                    color: Colors.redAccent,
+                                    activeColor: const Color(
+                                      0xFFBC4B51,
+                                    ), // Muted Red/Earth
                                     onTap: () => setState(() {
                                       _type = TransactionType.expense;
                                       _selectedCategoryId = null;
                                     }),
                                   ),
                                 ),
-                                const SizedBox(width: 16),
+                                const SizedBox(width: 12),
                                 Expanded(
                                   child: _TypeButton(
                                     title: 'Income',
+                                    icon: Icons.arrow_upward_rounded,
                                     isSelected: _type == TransactionType.income,
-                                    color: Colors.greenAccent[700]!,
+                                    activeColor: AppColors.forestGreen,
                                     onTap: () => setState(() {
                                       _type = TransactionType.income;
                                       _selectedCategoryId = null;
@@ -258,74 +298,123 @@ class _AddTransactionPageState extends State<AddTransactionPage>
                             ),
                             const SizedBox(height: 32),
 
-                            _buildLabel('Category'),
-                            const SizedBox(height: 16),
-                            Wrap(
-                              spacing: 12,
-                              runSpacing: 12,
-                              children: categories.map((cat) {
-                                final isSelected =
-                                    _selectedCategoryId == cat.id;
-                                return GestureDetector(
-                                  onTap: () => setState(
-                                    () => _selectedCategoryId = cat.id,
-                                  ),
-                                  child: AnimatedContainer(
-                                    duration: const Duration(milliseconds: 200),
+                            _buildLabel('Attach to Budget (Optional)'),
+                            const SizedBox(height: 8),
+                            _isBudgetsLoading
+                                ? const LinearProgressIndicator()
+                                : Container(
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 16,
-                                      vertical: 10,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: isSelected
-                                          ? cat.color
-                                          : Colors.white,
+                                      color: Colors.white,
                                       borderRadius: BorderRadius.circular(15),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withValues(
-                                            alpha: 0.03,
-                                          ),
-                                          blurRadius: 5,
-                                          offset: const Offset(0, 2),
-                                        ),
-                                      ],
                                       border: Border.all(
-                                        color: isSelected
-                                            ? cat.color
-                                            : Colors.grey[200]!,
+                                        color: Colors.grey[200]!,
                                         width: 1.5,
                                       ),
                                     ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(
-                                          _getIcon(cat.icon),
-                                          size: 18,
-                                          color: isSelected
-                                              ? Colors.white
-                                              : cat.color,
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Text(
-                                          cat.name,
-                                          style: TextStyle(
-                                            color: isSelected
-                                                ? Colors.white
-                                                : const Color(0xFF1E1E2D),
-                                            fontWeight: isSelected
-                                                ? FontWeight.bold
-                                                : FontWeight.w500,
-                                            fontSize: 13,
+                                    child: DropdownButtonHideUnderline(
+                                      child: DropdownButton<String?>(
+                                        value: _selectedBudgetId,
+                                        isExpanded: true,
+                                        hint: const Text('None'),
+                                        items: [
+                                          const DropdownMenuItem<String?>(
+                                            value: null,
+                                            child: Text('No Budget'),
                                           ),
+                                          ..._budgets.map(
+                                            (b) => DropdownMenuItem<String?>(
+                                              value: b.id,
+                                              child: Text(b.name),
+                                            ),
+                                          ),
+                                        ],
+                                        onChanged: (val) => setState(
+                                          () => _selectedBudgetId = val,
                                         ),
-                                      ],
+                                      ),
                                     ),
                                   ),
-                                );
-                              }).toList(),
-                            ),
+                            const SizedBox(height: 32),
+
+                            _buildLabel('Category'),
+                            const SizedBox(height: 16),
+                            _isCategoriesLoading
+                                ? const Center(
+                                    child: CircularProgressIndicator(),
+                                  )
+                                : Wrap(
+                                    spacing: 12,
+                                    runSpacing: 12,
+                                    children: filteredCategories.map((cat) {
+                                      final isSelected =
+                                          _selectedCategoryId == cat.id;
+                                      return GestureDetector(
+                                        onTap: () => setState(
+                                          () => _selectedCategoryId = cat.id,
+                                        ),
+                                        child: AnimatedContainer(
+                                          duration: const Duration(
+                                            milliseconds: 200,
+                                          ),
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 16,
+                                            vertical: 10,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: isSelected
+                                                ? cat.color
+                                                : Colors.white,
+                                            borderRadius: BorderRadius.circular(
+                                              15,
+                                            ),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: Colors.black.withValues(
+                                                  alpha: 0.03,
+                                                ),
+                                                blurRadius: 5,
+                                                offset: const Offset(0, 2),
+                                              ),
+                                            ],
+                                            border: Border.all(
+                                              color: isSelected
+                                                  ? cat.color
+                                                  : Colors.grey[200]!,
+                                              width: 1.5,
+                                            ),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(
+                                                CategoryIcons.getIcon(cat.icon),
+                                                size: 18,
+                                                color: isSelected
+                                                    ? Colors.white
+                                                    : cat.color,
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                cat.name,
+                                                style: TextStyle(
+                                                  color: isSelected
+                                                      ? Colors.white
+                                                      : const Color(0xFF1E1E2D),
+                                                  fontWeight: isSelected
+                                                      ? FontWeight.bold
+                                                      : FontWeight.w500,
+                                                  fontSize: 13,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      );
+                                    }).toList(),
+                                  ),
                             const SizedBox(height: 48),
 
                             // Save Button
@@ -427,39 +516,20 @@ class _AddTransactionPageState extends State<AddTransactionPage>
       ),
     );
   }
-
-  IconData _getIcon(String name) {
-    switch (name) {
-      case 'restaurant':
-        return Icons.restaurant;
-      case 'directions_car':
-        return Icons.directions_car;
-      case 'shopping_bag':
-        return Icons.shopping_bag;
-      case 'movie':
-        return Icons.movie;
-      case 'medical_services':
-        return Icons.medical_services;
-      case 'payments':
-        return Icons.payments;
-      case 'trending_up':
-        return Icons.trending_up;
-      default:
-        return Icons.category;
-    }
-  }
 }
 
 class _TypeButton extends StatelessWidget {
   final String title;
+  final IconData icon;
   final bool isSelected;
-  final Color color;
+  final Color activeColor;
   final VoidCallback onTap;
 
   const _TypeButton({
     required this.title,
+    required this.icon,
     required this.isSelected,
-    required this.color,
+    required this.activeColor,
     required this.onTap,
   });
 
@@ -469,32 +539,41 @@ class _TypeButton extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        height: 55,
+        padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
-          color: isSelected ? color : Colors.white,
-          borderRadius: BorderRadius.circular(15),
+          color: isSelected ? activeColor.withValues(alpha: 0.1) : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? activeColor : Colors.grey[200]!,
+            width: 2,
+          ),
           boxShadow: [
             if (isSelected)
               BoxShadow(
-                color: color.withValues(alpha: 0.2),
-                blurRadius: 10,
+                color: activeColor.withValues(alpha: 0.1),
+                blurRadius: 8,
                 offset: const Offset(0, 4),
               ),
           ],
-          border: Border.all(
-            color: isSelected ? color : Colors.grey[200]!,
-            width: 1.5,
-          ),
         ),
-        child: Center(
-          child: Text(
-            title,
-            style: TextStyle(
-              color: isSelected ? Colors.white : Colors.grey[600],
-              fontWeight: FontWeight.bold,
-              fontSize: 15,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 20,
+              color: isSelected ? activeColor : Colors.grey[400],
             ),
-          ),
+            const SizedBox(width: 8),
+            Text(
+              title,
+              style: TextStyle(
+                color: isSelected ? activeColor : Colors.grey[600],
+                fontWeight: FontWeight.bold,
+                fontSize: 15,
+              ),
+            ),
+          ],
         ),
       ),
     );

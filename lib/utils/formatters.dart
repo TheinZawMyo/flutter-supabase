@@ -1,8 +1,20 @@
 import 'package:intl/intl.dart';
 
 class Formatters {
-  static String formatCurrency(double amount) {
-    return NumberFormat.simpleCurrency(decimalDigits: 2).format(amount);
+  static String formatCurrency(double amount, {String? code, String? symbol}) {
+    final curCode = code ?? 'MMK';
+    final curSymbol = symbol ?? 'Ks';
+
+    if (curCode == 'MMK') {
+      final formatter = NumberFormat('#,###', 'en_US');
+      return '${formatter.format(amount)}$curSymbol';
+    }
+
+    final formatter = NumberFormat.currency(
+      symbol: curSymbol,
+      decimalDigits: 2,
+    );
+    return formatter.format(amount);
   }
 
   static String formatDate(DateTime date) {
