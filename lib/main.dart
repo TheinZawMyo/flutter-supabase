@@ -25,7 +25,7 @@ class MainApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Budget Tracking',
+      title: 'Budget Tracker',
       navigatorKey: navigatorKey,
       debugShowCheckedModeBanner: false,
       home: const AuthWrapper(),

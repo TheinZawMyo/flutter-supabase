@@ -182,6 +182,10 @@ class _AddCategoryPageState extends State<AddCategoryPage> {
                               borderRadius: BorderRadius.circular(15),
                               borderSide: BorderSide.none,
                             ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 16,
+                            ),
                           ),
                           validator: (v) => v == null || v.isEmpty
                               ? 'Please enter a name'
@@ -317,7 +321,7 @@ class _AddCategoryPageState extends State<AddCategoryPage> {
                         // Save Button
                         SizedBox(
                           width: double.infinity,
-                          height: 55,
+                          height: 56,
                           child: ElevatedButton(
                             onPressed: _isSaving ? null : _saveCategory,
                             style: ElevatedButton.styleFrom(
@@ -378,7 +382,7 @@ class _AddCategoryPageState extends State<AddCategoryPage> {
       child: GestureDetector(
         onTap: () => setState(() => _selectedType = type),
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12),
+          padding: const EdgeInsets.symmetric(vertical: 16),
           decoration: BoxDecoration(
             color: isSelected ? color.withValues(alpha: 0.1) : Colors.white,
             borderRadius: BorderRadius.circular(15),

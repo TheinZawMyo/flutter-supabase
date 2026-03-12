@@ -163,33 +163,25 @@ class _ProfilePageState extends State<ProfilePage>
               children: [
                 // Header Bar
                 Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
+                  padding: const EdgeInsets.all(16.0),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       IconButton(
                         onPressed: () => Navigator.pop(context),
                         icon: const Icon(
-                          Icons.arrow_back_ios_new_rounded,
+                          Icons.arrow_back_ios_new,
                           color: Colors.white,
-                        ),
-                        style: IconButton.styleFrom(
-                          backgroundColor: Colors.white.withValues(alpha: 0.2),
+                          size: 20,
                         ),
                       ),
                       const Text(
-                        'MY PROFILE',
+                        'My Profile',
                         style: TextStyle(
                           color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 1.5,
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                      const SizedBox(width: 48), // Spacer
                     ],
                   ),
                 ),
@@ -390,7 +382,7 @@ class _ProfilePageState extends State<ProfilePage>
                             position: _slideAnimation,
                             child: SizedBox(
                               width: double.infinity,
-                              height: 60,
+                              height: 56,
                               child: ElevatedButton(
                                 onPressed: _signOut,
                                 style: ElevatedButton.styleFrom(
@@ -548,7 +540,7 @@ class _ProfilePageState extends State<ProfilePage>
         fillColor: const Color(0xFFF1F4F9),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
-          vertical: 12,
+          vertical: 16,
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),

@@ -305,6 +305,7 @@ class _AddTransactionPageState extends State<AddTransactionPage>
                                 : Container(
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 16,
+                                      vertical: 16,
                                     ),
                                     decoration: BoxDecoration(
                                       color: Colors.white,
@@ -420,7 +421,7 @@ class _AddTransactionPageState extends State<AddTransactionPage>
                             // Save Button
                             SizedBox(
                               width: double.infinity,
-                              height: 60,
+                              height: 56,
                               child: ElevatedButton(
                                 onPressed: _isLoading ? null : _saveTransaction,
                                 style: ElevatedButton.styleFrom(
@@ -508,7 +509,7 @@ class _AddTransactionPageState extends State<AddTransactionPage>
           ),
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 16,
-            vertical: 18,
+            vertical: 16,
           ),
           filled: true,
           fillColor: Colors.white,

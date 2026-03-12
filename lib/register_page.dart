@@ -227,7 +227,7 @@ class _RegisterPageState extends State<RegisterPage>
                     const SizedBox(height: 24),
                     SizedBox(
                       width: double.infinity,
-                      height: 55,
+                      height: 56,
                       child: ElevatedButton(
                         onPressed: _isLoading ? null : _signUp,
                         style: ElevatedButton.styleFrom(

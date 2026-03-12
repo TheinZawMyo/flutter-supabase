@@ -183,7 +183,7 @@ class _AddBudgetPageState extends State<AddBudgetPage> {
                         const SizedBox(height: 48),
                         SizedBox(
                           width: double.infinity,
-                          height: 60,
+                          height: 56,
                           child: ElevatedButton(
                             onPressed: _isSaving ? null : _saveBudget,
                             style: ElevatedButton.styleFrom(
@@ -266,7 +266,7 @@ class _AddBudgetPageState extends State<AddBudgetPage> {
           fillColor: Colors.white,
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 16,
-            vertical: 18,
+            vertical: 16,
           ),
         ),
       ),
@@ -279,7 +279,7 @@ class _AddBudgetPageState extends State<AddBudgetPage> {
       child: GestureDetector(
         onTap: () => setState(() => _period = period),
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12),
+          padding: const EdgeInsets.symmetric(vertical: 16),
           decoration: BoxDecoration(
             color: isSelected
                 ? AppColors.forestGreen.withValues(alpha: 0.1)
